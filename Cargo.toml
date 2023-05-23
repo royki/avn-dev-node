@@ -1,6 +1,16 @@
 [profile.release]
 panic = "unwind"
 
+[workspace.package]
+version = "0.1.0"
+authors = ["Aventus systems team"]
+homepage = "https://www.aventus.io/"
+repository = "https://github.com/Aventus-Network-Services/avn-dev-node/"
+edition = "2021"
+rust-version = "1.64.0"
+license = "GPL-3.0"
+
+
 [workspace]
 members = [
 	"node",
