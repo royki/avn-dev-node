@@ -1,14 +1,18 @@
+use avn_dev_runtime::{
+	constants::{currency::AVT, time::MINUTES},
+	AccountId, AuraId, AvnId, Balance, BlockNumber, Signature, SudoConfig, SummaryConfig,
+	TokenManagerConfig, EXISTENTIAL_DEPOSIT,
+};
 use cumulus_primitives_core::ParaId;
-use avn_dev_runtime::{AccountId, AuraId, Signature, EXISTENTIAL_DEPOSIT};
+use hex_literal::hex;
 use sc_chain_spec::{ChainSpecExtension, ChainSpecGroup};
 use sc_service::ChainType;
 use serde::{Deserialize, Serialize};
-use sp_core::{sr25519, Pair, Public};
+use sp_core::{sr25519, Pair, Public, H160, H256};
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec` for the normal parachain runtime.
-pub type ChainSpec =
-	sc_service::GenericChainSpec<avn_dev_runtime::GenesisConfig, Extensions>;
+pub type ChainSpec = sc_service::GenericChainSpec<avn_dev_runtime::GenesisConfig, Extensions>;
 
 /// The default XCM version to set in genesis config.
 const SAFE_XCM_VERSION: u32 = xcm::prelude::XCM_VERSION;
@@ -42,8 +46,12 @@ type AccountPublic = <Signature as Verify>::Signer;
 /// Generate collator keys from seed.
 ///
 /// This function's return type must always match the session keys of the chain in tuple format.
-pub fn get_collator_keys_from_seed(seed: &str) -> AuraId {
-	get_from_seed::<AuraId>(seed)
+pub fn get_collator_account_keys_from_seed(seed: &str) -> (AccountId, AuraId, AvnId) {
+	(
+		get_account_id_from_seed::<sr25519::Public>(seed),
+		get_from_seed::<AuraId>(seed),
+		get_from_seed::<AvnId>(seed),
+	)
 }
 
 /// Helper function to generate an account ID from seed
@@ -57,15 +65,21 @@ where
 /// Generate the session keys from individual elements.
 ///
 /// The input must be a tuple of individual keys (a single arg for now since we have just one key).
-pub fn template_session_keys(keys: AuraId) -> avn_dev_runtime::SessionKeys {
-	avn_dev_runtime::SessionKeys { aura: keys }
+pub fn template_session_keys(aura: AuraId, avn: AvnId) -> avn_dev_runtime::SessionKeys {
+	avn_dev_runtime::SessionKeys { aura, avn }
 }
+
+const AVT_CONTRACT_ADDRESS: H160 = H160::zero();
+const VOTING_PERIOD: BlockNumber = 20 * MINUTES;
+
+const HALF_HOUR_SCHEDULE_PERIOD: BlockNumber = 30 * MINUTES;
+const ENDOWMENT_AMOUNT: Balance = 10_000 * AVT;
 
 pub fn development_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenSymbol".into(), "AVT".into());
+	properties.insert("tokenDecimals".into(), 18.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
@@ -78,14 +92,8 @@ pub fn development_config() -> ChainSpec {
 			testnet_genesis(
 				// initial collators.
 				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
+					get_collator_account_keys_from_seed("Alice"),
+					get_collator_account_keys_from_seed("Bob"),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -119,8 +127,8 @@ pub fn development_config() -> ChainSpec {
 pub fn local_testnet_config() -> ChainSpec {
 	// Give your base currency a unit name and decimal places
 	let mut properties = sc_chain_spec::Properties::new();
-	properties.insert("tokenSymbol".into(), "UNIT".into());
-	properties.insert("tokenDecimals".into(), 12.into());
+	properties.insert("tokenSymbol".into(), "AVT".into());
+	properties.insert("tokenDecimals".into(), 18.into());
 	properties.insert("ss58Format".into(), 42.into());
 
 	ChainSpec::from_genesis(
@@ -133,14 +141,8 @@ pub fn local_testnet_config() -> ChainSpec {
 			testnet_genesis(
 				// initial collators.
 				vec![
-					(
-						get_account_id_from_seed::<sr25519::Public>("Alice"),
-						get_collator_keys_from_seed("Alice"),
-					),
-					(
-						get_account_id_from_seed::<sr25519::Public>("Bob"),
-						get_collator_keys_from_seed("Bob"),
-					),
+					get_collator_account_keys_from_seed("Alice"),
+					get_collator_account_keys_from_seed("Bob"),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -178,7 +180,7 @@ pub fn local_testnet_config() -> ChainSpec {
 }
 
 fn testnet_genesis(
-	invulnerables: Vec<(AccountId, AuraId)>,
+	invulnerables: Vec<(AccountId, AuraId, AvnId)>,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> avn_dev_runtime::GenesisConfig {
@@ -189,22 +191,22 @@ fn testnet_genesis(
 				.to_vec(),
 		},
 		balances: avn_dev_runtime::BalancesConfig {
-			balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+			balances: endowed_accounts.iter().cloned().map(|k| (k, ENDOWMENT_AMOUNT)).collect(),
 		},
 		parachain_info: avn_dev_runtime::ParachainInfoConfig { parachain_id: id },
 		collator_selection: avn_dev_runtime::CollatorSelectionConfig {
-			invulnerables: invulnerables.iter().cloned().map(|(acc, _)| acc).collect(),
+			invulnerables: invulnerables.iter().cloned().map(|(acc, _, _)| acc).collect(),
 			candidacy_bond: EXISTENTIAL_DEPOSIT * 16,
 			..Default::default()
 		},
 		session: avn_dev_runtime::SessionConfig {
 			keys: invulnerables
 				.into_iter()
-				.map(|(acc, aura)| {
+				.map(|(acc, aura, avnk)| {
 					(
-						acc.clone(),                 // account id
-						acc,                         // validator id
-						template_session_keys(aura), // session keys
+						acc.clone(),                       // account id
+						acc,                               // validator id
+						template_session_keys(aura, avnk), // session keys
 					)
 				})
 				.collect(),
@@ -216,6 +218,20 @@ fn testnet_genesis(
 		parachain_system: Default::default(),
 		polkadot_xcm: avn_dev_runtime::PolkadotXcmConfig {
 			safe_xcm_version: Some(SAFE_XCM_VERSION),
+		},
+		assets: Default::default(),
+		token_manager: TokenManagerConfig {
+			_phantom: Default::default(),
+			lower_account_id: H256(hex!(
+				"000000000000000000000000000000000000000000000000000000000000dead"
+			)),
+			// Address of AVT contract
+			avt_token_contract: AVT_CONTRACT_ADDRESS,
+		},
+		sudo: SudoConfig { key: Some(get_account_id_from_seed::<sr25519::Public>("Ferdie")) },
+		summary: SummaryConfig {
+			schedule_period: HALF_HOUR_SCHEDULE_PERIOD,
+			voting_period: VOTING_PERIOD,
 		},
 	}
 }

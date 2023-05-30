@@ -53,6 +53,8 @@ sp-session = { git = "https://github.com/paritytech/substrate", default-features
 sp-std = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
 sp-version = { git = "https://github.com/paritytech/substrate", default-features = false, branch = "polkadot-v0.9.36" }
+pallet-assets = { default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
+node-primitives = { version = "2.0.0", default-features = false, git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.36" }
 
 # Polkadot
 pallet-xcm = { git = "https://github.com/paritytech/polkadot", default-features = false, branch = "release-v0.9.36" }
@@ -75,6 +77,15 @@ cumulus-primitives-utility = { git = "https://github.com/paritytech/cumulus.git"
 pallet-collator-selection = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.36", default-features = false }
 parachain-info = { git = "https://github.com/paritytech/cumulus.git", branch = "polkadot-v0.9.36", default-features = false }
 
+sp-avn-common = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-validators-manager = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-avn = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-ethereum-transactions = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-summary = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-token-manager = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-nft-manager = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+pallet-avn-proxy = { git = "https://github.com/Aventus-Network-Services/avn-parachain", tag = "v1.0.8", default-features = false }
+
 [features]
 default = [
 	"std",
@@ -95,6 +106,7 @@ std = [
 	"frame-support/std",
 	"frame-system-rpc-runtime-api/std",
 	"frame-system/std",
+	"pallet-assets/std",
 	"pallet-aura/std",
 	"pallet-authorship/std",
 	"pallet-balances/std",
@@ -109,6 +121,7 @@ std = [
 	"parachain-info/std",
 	"polkadot-parachain/std",
 	"polkadot-runtime-common/std",
+	"node-primitives/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",
@@ -123,6 +136,14 @@ std = [
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",
+	# AvN pallets
+	"sp-avn-common/std",
+	"pallet-avn/std",
+	"pallet-ethereum-transactions/std",
+	"pallet-nft-manager/std",
+	"pallet-summary/std",
+	"pallet-token-manager/std",
+	"pallet-validators-manager/std",
 ]
 
 runtime-benchmarks = [
@@ -140,6 +161,12 @@ runtime-benchmarks = [
 	"xcm-builder/runtime-benchmarks",
 	"cumulus-pallet-session-benchmarking/runtime-benchmarks",
 	"cumulus-pallet-xcmp-queue/runtime-benchmarks",
+	# AvN pallets
+	"pallet-ethereum-transactions/runtime-benchmarks",
+	"pallet-nft-manager/runtime-benchmarks",
+	"pallet-summary/runtime-benchmarks",
+	"pallet-token-manager/runtime-benchmarks",
+	"pallet-validators-manager/runtime-benchmarks",
 ]
 
 try-runtime = [

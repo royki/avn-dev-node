@@ -9,13 +9,23 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod weights;
 pub mod xcm_config;
 
+pub mod constants;
+use constants::{currency::*, time::*};
+
+mod emulations;
+use emulations::CandidateTransactionSubmitterEmulation;
+
+mod proxy_config;
+use proxy_config::AvnProxyConfig;
+
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use pallet_session::historical::{self as pallet_session_historical};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
-	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+	traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, ConvertInto, IdentifyAccount, Verify},
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, MultiSignature,
 };
@@ -29,17 +39,20 @@ use frame_support::{
 	construct_runtime,
 	dispatch::DispatchClass,
 	parameter_types,
-	traits::{ConstU32, ConstU64, ConstU8, Everything},
+	traits::{AsEnsureOriginWithArg, ConstU128, ConstU32, ConstU64, ConstU8, Everything},
 	weights::{
 		constants::WEIGHT_REF_TIME_PER_SECOND, ConstantMultiplier, Weight, WeightToFeeCoefficient,
 		WeightToFeeCoefficients, WeightToFeePolynomial,
 	},
-	PalletId,
+	PalletId, RuntimeDebug,
 };
+
 use frame_system::{
 	limits::{BlockLength, BlockWeights},
-	EnsureRoot,
+	EnsureRoot, EnsureSigned,
 };
+
+pub use pallet_avn::sr25519::AuthorityId as AvnId;
 pub use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use xcm_config::{XcmConfig, XcmOriginToTransactDispatchOrigin};
@@ -135,10 +148,9 @@ pub struct WeightToFee;
 impl WeightToFeePolynomial for WeightToFee {
 	type Balance = Balance;
 	fn polynomial() -> WeightToFeeCoefficients<Self::Balance> {
-		// in Rococo, extrinsic base weight (smallest non-zero weight) is mapped to 1 MILLIUNIT:
-		// in our template, we map to 1/10 of that, or 1/10 MILLIUNIT
-		let p = MILLIUNIT / 10;
-		let q = 100 * Balance::from(ExtrinsicBaseWeight::get().ref_time());
+		// We adjust the fee conversion so that the Extrinsic Base Weight corresponds to a 1 mAVT fee.
+		let p = 1 * MILLI_AVT;
+		let q = Balance::from(ExtrinsicBaseWeight::get().ref_time());
 		smallvec![WeightToFeeCoefficient {
 			degree: 1,
 			negative: false,
@@ -168,6 +180,7 @@ pub mod opaque {
 impl_opaque_keys! {
 	pub struct SessionKeys {
 		pub aura: Aura,
+		pub avn: Avn,
 	}
 }
 
@@ -188,25 +201,13 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 /// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
 /// up by `pallet_aura` to implement `fn slot_duration()`.
 ///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 12000;
 
 // NOTE: Currently it is not possible to change the slot duration after the chain has started.
 //       Attempting to do so will brick block production.
 pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
 
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
-
-// Unit = the base number of indivisible units for balances
-pub const UNIT: Balance = 1_000_000_000_000;
-pub const MILLIUNIT: Balance = 1_000_000_000;
-pub const MICROUNIT: Balance = 1_000_000;
-
-/// The existential deposit. Set to 1/10 of the Connected Relay Chain.
-pub const EXISTENTIAL_DEPOSIT: Balance = MILLIUNIT;
+/// The existential deposit. Set to 0 to enable accounts without any native tokens, to own assets.
+pub const EXISTENTIAL_DEPOSIT: Balance = 0;
 
 /// We assume that ~5% of the block weight is consumed by `on_initialize` handlers. This is
 /// used to limit the maximal weight of a single extrinsic.
@@ -344,8 +345,7 @@ impl pallet_balances::Config for Runtime {
 }
 
 parameter_types! {
-	/// Relay Chain `TransactionByteFee` / 10
-	pub const TransactionByteFee: Balance = 10 * MICROUNIT;
+	pub const TransactionByteFee: Balance = 5 * MICRO_AVT;
 }
 
 impl pallet_transaction_payment::Config for Runtime {
@@ -448,6 +448,126 @@ impl pallet_collator_selection::Config for Runtime {
 	type WeightInfo = ();
 }
 
+// Other pallets
+parameter_types! {
+	pub const AssetDeposit: Balance = 10 * MILLI_AVT;
+	pub const ApprovalDeposit: Balance = 100 * MICRO_AVT;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 1 * MILLI_AVT;
+	pub const MetadataDepositPerByte: Balance = 100 * MICRO_AVT;
+}
+
+impl pallet_session::historical::Config for Runtime {
+	// TODO review this as originally was using the staking pallet. This is a minimal approach on the Identification
+	type FullIdentification = AccountId;
+	type FullIdentificationOf = ConvertInto;
+}
+
+const ASSET_ACCOUNT_DEPOSIT: Balance = 100 * MICRO_AVT;
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = u128;
+	type RemoveItemsLimit = ConstU32<5>;
+	type AssetId = u32;
+	type AssetIdParameter = u32;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = AssetDeposit;
+	type AssetAccountDeposit = ConstU128<ASSET_ACCOUNT_DEPOSIT>;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type ApprovalDeposit = ApprovalDeposit;
+	type StringLimit = StringLimit;
+	type Freezer = ();
+	type Extra = ();
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type BenchmarkHelper = ();
+}
+
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+}
+
+impl pallet_avn::Config for Runtime {
+	type AuthorityId = AvnId;
+	type EthereumPublicKeyChecker = ();
+	type NewSessionHandler = ();
+	type DisabledValidatorChecker = ();
+	type FinalisedBlockChecker = ();
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	RuntimeCall: From<C>,
+{
+	type Extrinsic = UncheckedExtrinsic;
+	type OverarchingCall = RuntimeCall;
+}
+
+parameter_types! {
+	pub const AdvanceSlotGracePeriod: BlockNumber = 5;
+	pub const MinBlockAge: BlockNumber = 5;
+	pub const MaxAllowedReportLatency: BlockNumber = 5 * MINUTES;
+}
+
+impl pallet_summary::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type AdvanceSlotGracePeriod = AdvanceSlotGracePeriod;
+	type MinBlockAge = MinBlockAge;
+	type CandidateTransactionSubmitter = CandidateTransactionSubmitterEmulation;
+	type AccountToBytesConvert = Avn;
+	type ReportSummaryOffence = ();
+	type FinalityReportLatency = MaxAllowedReportLatency;
+	type WeightInfo = pallet_summary::default_weights::SubstrateWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const AvnTreasuryPotId: PalletId = PalletId(*b"Treasury");
+	pub const TreasuryGrowthPercentage: Perbill = Perbill::from_percent(75);
+}
+
+pub type EthAddress = H160;
+
+impl pallet_token_manager::pallet::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type TokenBalance = Balance;
+	type TokenId = EthAddress;
+	type ProcessedEventsChecker = ();
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+	type OnGrowthLiftedHandler = ();
+	type TreasuryGrowthPercentage = TreasuryGrowthPercentage;
+	type AvnTreasuryPotId = AvnTreasuryPotId;
+	type WeightInfo = pallet_token_manager::default_weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_nft_manager::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type ProcessedEventsChecker = ();
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+	type WeightInfo = pallet_nft_manager::default_weights::SubstrateWeight<Runtime>;
+}
+
+impl pallet_avn_proxy::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type Currency = Balances;
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+	type ProxyConfig = AvnProxyConfig;
+	type WeightInfo = pallet_avn_proxy::default_weights::SubstrateWeight<Runtime>;
+}
+
+// // Other pallets
+
 /// Configure the pallet template in pallets/template.
 impl pallet_template::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -487,6 +607,18 @@ construct_runtime!(
 
 		// Template
 		TemplatePallet: pallet_template::{Pallet, Call, Storage, Event<T>}  = 40,
+
+		// Substrate pallets
+		Assets: pallet_assets = 60,
+		Sudo: pallet_sudo = 62,
+		Historical: pallet_session_historical::{Pallet} = 71,
+
+		// Rest of AvN pallets
+		Avn: pallet_avn = 81,
+		NftManager: pallet_nft_manager = 86,
+		TokenManager: pallet_token_manager = 87,
+		Summary: pallet_summary = 88,
+		AvnProxy: pallet_avn_proxy = 89,
 	}
 );
 
