@@ -13,6 +13,10 @@
 # The cache for docker container dependency
 /.cargo/config
 
+/parachain-launch/*
+!/parachain-launch/config.yml
+!/parachain-launch/README.md
+
 .DS_Store
 .idea
 .vscode

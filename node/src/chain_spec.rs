@@ -92,8 +92,8 @@ pub fn development_config() -> ChainSpec {
 			testnet_genesis(
 				// initial collators.
 				vec![
-					get_collator_account_keys_from_seed("Alice"),
-					get_collator_account_keys_from_seed("Bob"),
+					get_collator_account_keys_from_seed("Eve"),
+					get_collator_account_keys_from_seed("Ferdie"),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
@@ -141,8 +141,8 @@ pub fn local_testnet_config() -> ChainSpec {
 			testnet_genesis(
 				// initial collators.
 				vec![
-					get_collator_account_keys_from_seed("Alice"),
-					get_collator_account_keys_from_seed("Bob"),
+					get_collator_account_keys_from_seed("Eve"),
+					get_collator_account_keys_from_seed("Ferdie"),
 				],
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),

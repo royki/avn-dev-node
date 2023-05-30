@@ -1,0 +1,55 @@
+# Relaychain Configuration
+relaychain:
+  image: parity/polkadot:v0.9.36 # the docker image to use
+  chain: rococo-local # the chain to use
+  runtimeGenesisConfig: # additonal genesis override
+    configuration:
+      config:
+        validation_upgrade_cooldown: 5
+        validation_upgrade_delay: 5
+  overrides: # additonal runtime override
+    session_length_in_blocks: 50
+  env: # environment variables for all relaychain nodes
+    RUST_LOG: parachain::candidate-backing=trace
+  flags: # additional CLI flags for all relaychain nodes
+    - --rpc-methods=unsafe
+  nodes: # nodes config
+    - name: alice # the node name and session key, this imply `--alice`
+      wsPort: 9944 # default ws port number is `9944 + global_node_index`
+      rpcPort: 9933 # default rpc port number is `9933 + global_node_index`
+      port: 30333 # default libp2p port number is `30333 + global_node_index`
+      flags: # additional CLI flags for this node
+        - --force-authoring
+      env:
+        RUST_LOG: babe=debug # environment varitables for this node
+    - name: bob
+
+# Parachain Configuration
+parachains:
+- image: aventus/avn-dev-node:latest
+  chain: local
+  id: 2000
+  parachain: true
+  flags: # CLI flags for this parachain nodes
+    - --rpc-methods=unsafe
+    - --force-authoring
+    - --execution=wasm
+  relaychainFlags: # CLI flags for the relaychain port
+    - --execution=wasm
+  env: # environment variables for this parachain nodes
+    RUST_LOG: sc_basic_authorship=trace
+  nodes: # nodes config
+  - name: collator-eve
+    wsPort: 9947
+    rpcPort: 9936
+    port: 30336
+    flags: # additional CLI flags for this node
+      - --eve
+    env:
+      RUST_LOG: aura=debug # environment varitables for this node
+  - name: collator-ferdie
+    port: 30337
+    wsPort: 9948
+    rpcPort: 9937
+    flags:
+    - --ferdie
