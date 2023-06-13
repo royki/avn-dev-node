@@ -1,12 +1,16 @@
-# AvN Dev Node - an AvN Parachain Template based on Substrate Cumulus
+# AvN dev node template
+
+
+⚠️ IMPORTANT NOTE ⚠️ <br />
+This template provides a simple example of how to build a parachain node using Avn pallets and MUST NOT BE USED IN PRODUCTION. It is configured with limited functionality and only contains a subset of avn pallets.
+---
+---
+<br />
 
 This project template is a modified version of the original
-[Substrate parachain Template](https://github.com/substrate-developer-hub/substrate-parachain-template). It has been customized to include the necessary dependencies for integrating the AvN pallets into the runtime.
+[Substrate parachain Template](https://github.com/substrate-developer-hub/substrate-parachain-template). It has been customized to include the minimum necessary dependencies for integrating some of the AvN pallets into the runtime.
 
 For more details on the implementation of the AvN Dev Node runtime, please refer to the [runtime/README.md](runtime/README.md) file.
-
-**Important note:**
-This project should be used only for development purposes and not in production instances.
 
 ## Parachains introduction and tutorials
 👉 Learn more about parachains [here](https://wiki.polkadot.network/docs/learn-parachains), and
@@ -53,7 +57,7 @@ cargo build --release
 Prerequisites:
  - [Install Docker Engine](https://docs.docker.com/engine/install/) 24.0.2 or newer
  - [Post-installation steps for Linux | Docker Documentation](https://docs.docker.com/engine/install/linux-postinstall/)
- 
+
 ```sh
 # Builds the docker image with the build artefacts under target/release
 docker build . --tag avn-dev-node:latest
