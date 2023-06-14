@@ -1,0 +1,23 @@
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  check-code:
+    if: github.ref != 'refs/heads/main'
+    uses: ./.github/workflows/cargo-check.yml
+
+  build-code:
+    uses: ./.github/workflows/cargo-build.yml
+
+  test-code:
+    uses: ./.github/workflows/cargo-test.yml

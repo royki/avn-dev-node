@@ -7,6 +7,12 @@ This template provides a simple example of how to build a parachain node using A
 ---
 <br />
 
+# AvN Dev Node - an AvN Parachain Template based on Substrate Cumulus
+<p align="center">
+    <a href="https://github.com/Aventus-Network-Services/avn-dev-node/actions/workflows/ci.yml">
+        <img src="https://github.com/Aventus-Network-Services/avn-dev-node/actions/workflows/ci.yml/badge.svg?branch=main" alt=".github/workflows/ci.yml"></a>
+</p>
+
 This project template is a modified version of the original
 [Substrate parachain Template](https://github.com/substrate-developer-hub/substrate-parachain-template). It has been customized to include the minimum necessary dependencies for integrating some of the AvN pallets into the runtime.
 
