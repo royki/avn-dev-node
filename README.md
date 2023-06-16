@@ -81,6 +81,6 @@ The simplest way to run a node is as follows:
 ```bash
 target/release/avn-dev-node --dev -- --chain rococo-local
 ```
-After starting the node, you will notice that no blocks are generated. This is because a parachain needs to be onboarded to a relay chain that it is configured with. Substrate provides useful tutorials on how to set up an environment with a relay chain, which is highly recommended to complete. You can find these tutorials [here](https://docs.substrate.io/tutorials/build-a-parachain/https://docs.substrate.io/tutorials/build-a-parachain/).
+After starting the node, you will notice that no blocks are generated. This is because a parachain needs to be onboarded to a relay chain that it is configured with. Substrate provides useful tutorials on how to set up an environment with a relay chain, which is highly recommended to complete. You can find these tutorials [here](https://docs.substrate.io/tutorials/build-a-parachain/).
 
 To expedite the process of local development for this project, we recommend following the [local setup guide](parachain-launch/README.md) to orchestrate a full local network.
