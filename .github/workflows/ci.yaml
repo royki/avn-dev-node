@@ -16,8 +16,12 @@ jobs:
     if: github.ref != 'refs/heads/dev'
     uses: ./.github/workflows/cargo-check.yaml
 
-#   build-code:
-#     uses: ./.github/workflows/cargo-build.yaml
+  build-code:
+    uses: ./.github/workflows/cargo-build.yaml
+
+  build-image:
+    needs: [build-code]
+    uses: ./.github/workflows/image-build.yaml
 
   test-code:
     uses: ./.github/workflows/cargo-test.yaml
