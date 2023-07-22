@@ -37,9 +37,9 @@ RUN apt-get update && \
 
 # add avn-dev-node binary to the docker image
 COPY target/release/avn-dev-node /usr/local/bin/
+RUN chmod +x /usr/local/bin/avn-dev-node
 
 USER avn-node
-RUN chmod +x /usr/local/bin/avn-dev-node
 # check if executable works in this container
 RUN /usr/local/bin/avn-dev-node --version
 
