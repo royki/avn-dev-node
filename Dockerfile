@@ -39,7 +39,7 @@ RUN apt-get update && \
 COPY target/release/avn-dev-node /usr/local/bin/
 
 USER avn-node
-
+RUN chmod +x /usr/local/bin/avn-dev-node
 # check if executable works in this container
 RUN /usr/local/bin/avn-dev-node --version
 
