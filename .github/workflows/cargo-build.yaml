@@ -84,6 +84,12 @@ jobs:
       - name: Build
         run: cargo build --locked --release
 
+      - name: Save the buid
+        uses: actions/upload-artifact@master
+        with:
+          name: avn-dev-node
+          path: target/release/avn-dev-node
+
   image-build-and-push:
     runs-on: ubuntu-latest
     needs: [cancel-previous, configure, cargo-build]
@@ -100,7 +106,6 @@ jobs:
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@master
-
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
