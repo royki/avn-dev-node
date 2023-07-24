@@ -3,6 +3,9 @@ FROM rust:latest as builder
 RUN apt update
 RUN apt install -y clang cmake protobuf-compiler
 
+RUN rustup default stable
+RUN rustup update
+
 RUN rustup update nightly
 RUN rustup target add wasm32-unknown-unknown --toolchain nightly
 RUN rustup default nightly
