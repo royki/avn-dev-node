@@ -34,14 +34,11 @@ jobs:
         uses: arduino/setup-protoc@v1
 
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: nightly-2023-05-25
           components: rustfmt, clippy
           target: wasm32-unknown-unknown
-          override: true
-          default: true
 
       - name: Set up cargo cache
         uses: actions/cache@v3
@@ -57,9 +54,3 @@ jobs:
 
       - name: Build
         run: cargo build --locked --release
-
-      - name: Save the buid
-        uses: actions/upload-artifact@master
-        with:
-          name: avn-dev-node
-          path: target/release/avn-dev-node
