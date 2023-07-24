@@ -1,23 +1,25 @@
+FROM rust:latest as builder
+
+RUN apt update
+RUN apt install -y clang cmake protobuf-compiler
+
+RUN rustup update nightly
+RUN rustup target add wasm32-unknown-unknown --toolchain nightly
+RUN rustup default nightly
+
+WORKDIR /var/www/ewx-avn-node
+ENV CARGO_HOME=/var/www/ewx-avn-node/.cargo
+
+COPY . /var/www/ewx-avn-node
+
+ENV RUST_BACKTRACE 1
+RUN cargo build --release
+
 FROM ubuntu:22.04
-
-# metadata
-ARG VCS_REF
-ARG BUILD_DATE
-ARG IMAGE_NAME
-
-# TODO once public, add io.aventus.image.source
-LABEL io.aventus.image.authors="devops@aventus.io" \
-	io.aventus.image.vendor="Aventus Network Services" \
-	io.aventus.image.title="${IMAGE_NAME}" \
-	io.aventus.image.description="AvN Development parachain" \
-	io.aventus.image.revision="${VCS_REF}" \
-	io.aventus.image.created="${BUILD_DATE}" \
-	io.aventus.image.documentation="https://github.com/Aventus-Network-Services/avn-dev-node"
 
 # show backtraces
 ENV RUST_BACKTRACE 1
 
-# install tools and dependencies
 RUN apt-get update && \
 	DEBIAN_FRONTEND=noninteractive apt-get install -y \
 	libssl3 \
@@ -35,15 +37,17 @@ RUN apt-get update && \
 	ln -s /data /avn-node/.local/share/avn-node && \
 	mkdir -p /specs
 
-# add avn-dev-node binary to the docker image
-COPY target/release/avn-dev-node /usr/local/bin/
+COPY --from=builder /var/www/ewx-avn-node/target/release/avn-dev-node /usr/local/bin/
+
 RUN chmod +x /usr/local/bin/avn-dev-node
 
 USER avn-node
+
 # check if executable works in this container
 RUN /usr/local/bin/avn-dev-node --version
 
-EXPOSE 30333 30334 9933 9944 9615
+EXPOSE 30333 9933 9944 9615
+
 VOLUME ["/data"]
 
 ENTRYPOINT ["/usr/local/bin/avn-dev-node"]
