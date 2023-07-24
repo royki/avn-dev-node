@@ -19,11 +19,5 @@ jobs:
   build-code:
     uses: ./.github/workflows/cargo-build.yaml
 
-  build-image:
-    needs: [build-code]
-    uses: ./.github/workflows/image-build.yaml
-    with:
-      environment: dev
-
   test-code:
     uses: ./.github/workflows/cargo-test.yaml
