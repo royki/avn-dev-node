@@ -13,10 +13,10 @@ concurrency:
 
 jobs:
   check-code:
-    if: github.ref != 'refs/heads/dev'
     uses: ./.github/workflows/cargo-check.yaml
 
   build-code:
+    if: github.ref != 'refs/heads/dev'
     uses: ./.github/workflows/cargo-build.yaml
 
   test-code:
