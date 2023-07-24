@@ -16,6 +16,10 @@ ENV CARGO_HOME=/var/www/ewx-avn-node/.cargo
 COPY . /var/www/ewx-avn-node
 
 ENV RUST_BACKTRACE 1
+
+# Github action throws error - https://substrate.stackexchange.com/questions/9209/how-to-resolve-errore0422-cannot-find-struct-variant-or-union-type-linecol
+RUN cargo update -p "proc-macro2"
+
 RUN cargo build --release
 
 FROM ubuntu:22.04
