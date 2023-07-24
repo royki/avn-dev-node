@@ -12,7 +12,7 @@ license = "GPL-3.0"
 
 
 [workspace]
-resolver = "1"
+resolver = "2"
 members = [
 	"node",
 	"pallets/*",
