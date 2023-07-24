@@ -1,4 +1,4 @@
-name: Image build and push
+name: Build and deploy
 
 on:
   push:
@@ -117,9 +117,9 @@ jobs:
           name: avn-dev-node
           path: target/release/avn-dev-node
 
-  image-build-and-push:
+  image-build:
     runs-on: ubuntu-latest
-    needs: [cancel-previous, configure]
+    needs: [cancel-previous, configure, cargo-build]
     environment:
         name: ${{ needs.configure.outputs.ENVIRONMENT }}
     steps:
