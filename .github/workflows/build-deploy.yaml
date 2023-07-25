@@ -21,8 +21,6 @@ jobs:
     outputs:
       ENVIRONMENT: ${{ steps.configure.outputs.ENVIRONMENT }}
       IMAGE_TAG: ${{ steps.configure.outputs.IMAGE_TAG }}
-      PRERELEASE: ${{ steps.configure.outputs.PRERELEASE }}
-      TAG_DRY_RUN: ${{ steps.configure.outputs.TAG_DRY_RUN }}
     steps:
       - uses: styfle/cancel-workflow-action@0.11.0
         with:
@@ -32,8 +30,6 @@ jobs:
           if [[ "${{ github.ref }}" == "refs/heads/dev" ]]; then
             echo "ENVIRONMENT=dev" >> $GITHUB_OUTPUT
             echo "IMAGE_TAG=$(uuidgen)" >> $GITHUB_OUTPUT
-            echo "PRERELEASE=true" >> $GITHUB_OUTPUT
-            echo "TAG_DRY_RUN=true" >> $GITHUB_OUTPUT
           else
             echo "Branch ${{ github.ref }} is not configured for deployment"
             exit 1
@@ -117,7 +113,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
           # Build and Push ewx-avn-node
-          docker build -t $ECR_REGISTRY/ewx-avn-node:$BUILD_ID .
+          docker build -t $ECR_REGISTRY/ewx-avn-node:$BUILD_ID . -f Dockerfile
           docker push $ECR_REGISTRY/ewx-avn-node:$BUILD_ID
 
       - name: Logout of Amazon ECR
